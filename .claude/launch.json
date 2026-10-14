@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "packing-service",
+      "runtimeExecutable": "C:\\Users\\vovav\\PycharmProjects\\OCR_sklad_parce_docs\\venv\\Scripts\\python.exe",
+      "runtimeArgs": ["-m", "packing_service.api"],
+      "port": 8091
+    }
+  ]
+}

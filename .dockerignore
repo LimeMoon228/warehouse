@@ -1,0 +1,15 @@
+packing-lists
+output
+docs
+tests
+venv
+.env
+.git
+.venv
+.idea
+.pytest_cache
+*.egg-info
+__pycache__
+.DS_Store
+Dockerfile
+.dockerignore

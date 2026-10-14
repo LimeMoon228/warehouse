@@ -1,0 +1,9 @@
+venv/
+.venv/
+.idea/
+__pycache__/
+*.egg-info/
+output/
+packing-lists/
+.DS_Store
+.env

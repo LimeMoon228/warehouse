@@ -1,0 +1,104 @@
+name: docker
+
+on:
+  push:
+    branches: [master]
+    tags: ["v*"]
+  pull_request:
+    branches: [master]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: pyproject.toml
+      - run: pip install ".[dev,cpu]"
+      - run: pytest
+
+  image:
+    needs: test
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository }}
+          tags: |
+            type=raw,value=latest,enable={{is_default_branch}}
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=sha
+            type=raw,value=${{ github.sha }}
+
+      - name: Build
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: linux/amd64
+          load: true
+          tags: packing-smoke
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Smoke test
+        run: |
+          docker network create --internal smoke
+          docker run -d --name packing --network smoke -e PACKING_API_KEY=ci packing-smoke
+          for i in $(seq 1 40); do
+            status=$(docker inspect -f '{{.State.Health.Status}}' packing)
+            [ "$status" = healthy ] && break
+            [ "$(docker inspect -f '{{.State.Running}}' packing)" = false ] && break
+            sleep 3
+          done
+          if [ "$status" != healthy ]; then
+            echo "container is not healthy: $status"
+            docker logs packing
+            exit 1
+          fi
+          # /health не прогоняет модель, а paddle может падать только на инференсе.
+          # Пустой кадр табличный пайплайн роняет (IndexError в cells_det_results_nms), поэтому — табличка 2x3.
+          docker exec packing python -c "
+          import cv2, numpy as np
+          from packing_service.ocr import ocr_model
+          img = np.full((400, 900, 3), 255, np.uint8)
+          for x in (20, 300, 600, 880): cv2.line(img, (x, 20), (x, 380), (0, 0, 0), 2)
+          for y in (20, 200, 380): cv2.line(img, (20, y), (880, y), (0, 0, 0), 2)
+          for i, t in enumerate(['NO', 'NAME', 'QTY']): cv2.putText(img, t, (60 + 300 * i, 130), cv2.FONT_HERSHEY_SIMPLEX, 2, (0, 0, 0), 3)
+          for i, t in enumerate(['1', 'BOX', '5']): cv2.putText(img, t, (60 + 300 * i, 310), cv2.FONT_HERSHEY_SIMPLEX, 2, (0, 0, 0), 3)
+          assert 'BOX' in ocr_model().predict(img)[0].html['table_1']
+          "
+
+      - if: github.event_name != 'pull_request'
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Push
+        if: github.event_name != 'pull_request'
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: linux/amd64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha

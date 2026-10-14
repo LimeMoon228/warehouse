@@ -1,0 +1,27 @@
+[project]
+name = "erp-packing-service"
+version = "0.1.0"
+description = "Extracts goods, quantities and packages from packing list PDFs (text layer or OCR + local LLM)."
+requires-python = ">=3.10"
+dependencies = [
+    # doc-parser тянет paddlex[ocr], без него TableRecognitionPipelineV2 не создаётся; cv2 приходит вместе с ним
+    "paddleocr[doc-parser]>=3.0",
+    "pymupdf",
+    "numpy",
+    "openai",
+    "pydantic>=2",
+    "python-dotenv",
+]
+
+[project.optional-dependencies]
+api = ["fastapi", "uvicorn", "python-multipart"]
+cpu = ["paddlepaddle>=3.2,<3.3"]
+gpu = ["paddlepaddle-gpu>=3.2,<3.3"]
+dev = ["pytest"]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = ["packing_service"]
