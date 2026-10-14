@@ -26,8 +26,8 @@ ERP-бек ──POST /recognize (PDF)──► packing-сервис ──те�
 ```json
 {
   "items": [
-    { "name": "Composite Square Tube", "quantity": "69200", "quantity_unit": "pcs", "package_type": "pallets", "package_count": "5" },
-    { "name": "Composite Square Tube", "quantity": "34600", "quantity_unit": "pcs", "package_type": null, "package_count": null }
+    { "name": "Composite Square Tube", "quantity": 69200, "quantity_unit": "PCS", "package_type": "PALLETS", "package_count": "5" },
+    { "name": "Composite Square Tube", "quantity": 34600, "quantity_unit": "PCS", "package_type": null, "package_count": null }
   ],
   "total_packages": "5"
 }
@@ -36,9 +36,9 @@ ERP-бек ──POST /recognize (PDF)──► packing-сервис ──те�
 | Поле | Тип | Правило |
 |---|---|---|
 | `items[].name` | string \| null | название товара; `null`, если оно в объединённой ячейке с предыдущей строкой |
-| `items[].quantity` | string \| null | количество товара **как в документе** (`"1597,041"`, `"26,365.58"`) — числом не приводится |
-| `items[].quantity_unit` | string \| null | единица: km, pcs, kg… |
-| `items[].package_type` | string \| null | carton, box, pallet, case… |
+| `items[].quantity` | number \| null | количество товара числом: `"1597,041"` в документе → `1597.041`, `"26,365.58"` → `26365.58` (переводит LLM) |
+| `items[].quantity_unit` | string \| null | единица заглавными: `KM`, `PCS`, `KG`… (как в документе, без приведения `KGS` → `KG`) |
+| `items[].package_type` | string \| null | тип упаковки заглавными: `CARTON`, `BOX`, `PALLET`, `CASE`… (`PALLET` и `PALLETS` не сводятся) |
 | `items[].package_count` | string \| null | число упаковок; если упаковка общая для нескольких строк — только у первой |
 | `total_packages` | string \| null | итог упаковок по документу |
 
